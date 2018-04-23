@@ -14,13 +14,13 @@ library(RCircos)
 library(openxlsx)
 library(ggplot2) ; library(ggsignif)
 path <- "~/Documents/RWTH_Aachen"
-source(paste(path,"/FUNCTIONS/general_functions.R", sep=""))
-source(paste(path,"/FUNCTIONS/PLOT.R", sep=""))
-source(paste(path,"/HELA/HELA_functions.R", sep=""))
-load("/Users/miyang/Documents/RWTH_Aachen/HELA/DATA/Hela_data_log.Rdata")
-load("/Users/miyang/Documents/RWTH_Aachen/HELA/DATA/Hela_data_original.Rdata")
-load("/Users/miyang/Documents/RWTH_Aachen/HELA/DATA/Hela_data_AVG.Rdata")
-protein_names <- read.csv("~/Documents/RWTH_Aachen/HELA/DATA/protein_names", row.names=1) ; protein_names <- protein_names$x
+source(paste0(path,"/FUNCTIONS/general_functions.R"))
+source(paste0(path,"/FUNCTIONS/PLOT.R"))
+source(paste0(path,"/HELA/HELA_functions.R"))
+load(paste0(path,"/HELA/DATA/Hela_data_log.Rdata"))
+load(paste0(path,"/HELA/DATA/Hela_data_original.Rdata"))
+load(paste0(path,"/HELA/DATA/Hela_data_AVG.Rdata"))
+protein_names <- read.csv(paste0(path,"/HELA/DATA/protein_names"), row.names=1) ; protein_names <- protein_names$x
 
 ### define orders
 Hela_CCL2 <- c(2,6,7,12,13,14)
@@ -32,7 +32,7 @@ Hela_total <- 1:14
 # make the combinations
 ```{r include=FALSE, cache=FALSE}
 library(openxlsx)
-Proteome_all <- read.xlsx("/Users/miyang/Documents/RWTH_Aachen/HELA/ORIGINAL_DATA/Proteome_all161021_unlogged_ToMi.xlsx" )
+Proteome_all <- read.xlsx(paste0(path,"/HELA/ORIGINAL_DATA/Proteome_all161021_unlogged_ToMi.xlsx" ))
 rownames(Proteome_all) <- Proteome_all[ ,1] ; Proteome_all <- Proteome_all[ ,-1]
 
 original <- Proteome_all[ ,grep("O", colnames(Proteome_all))]
@@ -100,11 +100,11 @@ L <- list(corr_between_replicates, corr_between_cells, corr_between_groups) ; na
 
 kruskal.test(L)
 
-pdf(file=paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/combinatorial_correlation/correlation_boxplot.pdf"), height=10, width=14, compress=TRUE)
+pdf(file=paste0(path,"/HELA/PLOT/combinatorial_correlation/correlation_boxplot.pdf"), height=10, width=14, compress=TRUE)
 nice_boxplot_list(L, title="Combinatorial correlation")
 dev.off()
 
-pdf(file=paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/combinatorial_correlation/correlation_boxplot_Top1000_proteins.pdf"), height=10, width=14, compress=TRUE)
+pdf(file=paste0(path,"/HELA/PLOT/combinatorial_correlation/correlation_boxplot_Top1000_proteins.pdf"), height=10, width=14, compress=TRUE)
 nice_boxplot_list(L, title="Combinatorial correlation")
 dev.off()
 
@@ -128,7 +128,7 @@ dev.off()
   result_transformed[result_transformed$groups==2,2] <- "Between cells of same group"
   result_transformed[result_transformed$groups==3,2] <- "Between CCL2/Kyoto"
   
-  write.xlsx(result_transformed, "/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/combinatorial_correlation/combinatorial_pearson_correlation_TABLE.xlsx")
+  write.xlsx(result_transformed, paste0(path,"/HELA/PLOT/combinatorial_correlation/combinatorial_pearson_correlation_TABLE.xlsx"))
    
 ```
 

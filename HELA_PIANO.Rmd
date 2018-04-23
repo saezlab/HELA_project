@@ -16,11 +16,11 @@ library(qusage)
 library(VennDiagram)
 require(gridExtra)
 path <- "~/Documents/RWTH_Aachen"
-source(paste(path,"/FUNCTIONS/general_functions.R", sep=""))
-source(paste(path,"/HELA/HELA_functions.R", sep=""))
-source(paste(path,"/FUNCTIONS/PLOT.R", sep=""))
-load(paste(path,"/SANGER_DATA/MASTER_LIST_22112013.ro", sep="")) 
-load("/Users/miyang/Documents/RWTH_Aachen/HELA/DATA/Hela_data_log.Rdata")
+source(paste0(path,"/FUNCTIONS/general_functions.R"))
+source(paste0(path,"/HELA/HELA_functions.R"))
+source(paste0(path,"/FUNCTIONS/PLOT.R"))
+load(paste0(path,"/SANGER_DATA/MASTER_LIST_22112013.ro")) 
+load(paste0(path,"/HELA/DATA/Hela_data_log.Rdata"))
 
 Hela_CCL2 <- c(2,6,7,12,13,14)
 Hela_11 <- 11
@@ -38,7 +38,7 @@ feature_name <- "mRNA"
 x <- Hela_data_log[[feature_name]] ; x <- x[apply(x, 1, function(y) !all(is.na(y))),]
 
 # result folder
-result_folder <- paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PATHWAY/PIANO/", feature_name ) ; setwd(result_folder) 
+result_folder <- paste0(path,"/HELA/PATHWAY/PIANO/", feature_name ) ; setwd(result_folder) 
 # control
 test_1 <- x[ , Hela_Kyoto ] ; name_test_1 <- "Hela_Kyoto"
 # case
@@ -81,10 +81,10 @@ storedata(result_diff_expr, result_folder)
 # GSEA
 ```{r include=FALSE, cache=FALSE}
 # Gene Set Annotation, Define your specific Gene set collection
-GSC <- read.table(paste("/Users/miyang/Documents/RWTH_Aachen/GENERAL_DATA/GSEA_Hallmarksets_mod.txt",sep=""), header = FALSE, sep = "\t")
+GSC <- read.table(paste0(path,"/GENERAL_DATA/GSEA_Hallmarksets_mod.txt" ), header = FALSE, sep = "\t")
 GSC <- loadGSC(GSC)
 
-load("/Users/miyang/Documents/RWTH_Aachen/GENERAL_DATA/MSigDB/MSigDB_SL_format.RData"  ) 
+load(paste0(path,"/GENERAL_DATA/MSigDB/MSigDB_SL_format.RData" ) ) 
 GSC[[1]] <- MSigDB_SL_format$HGNC_SYMBOL
 
 # gsData <- read.gmt("/Users/miyang/Documents/RWTH_Aachen/GENERAL_DATA/GO_CC/c5.cc.v6.0.symbols.gmt")
@@ -156,9 +156,9 @@ return(list(area1,area2,area3,n12,n23,n13,n123))
 
 color <- c("royalblue1","red2","springgreen3")
 
-result_diff_expr_mRNA <- read.csv("/Users/miyang/Documents/RWTH_Aachen/HELA/PATHWAY/PIANO/mRNA/result_diff_expr" )
-result_diff_expr_Prot <- read.csv("/Users/miyang/Documents/RWTH_Aachen/HELA/PATHWAY/PIANO/Prot/result_diff_expr" )
-result_diff_expr_Kloss<- read.csv("/Users/miyang/Documents/RWTH_Aachen/HELA/PATHWAY/PIANO/Kloss/result_diff_expr" )
+result_diff_expr_mRNA <- read.csv(paste0(path,"/HELA/PATHWAY/PIANO/mRNA/result_diff_expr" ))
+result_diff_expr_Prot <- read.csv(paste0(path,"/HELA/PATHWAY/PIANO/Prot/result_diff_expr" ))
+result_diff_expr_Kloss<- read.csv(paste0(path,"/HELA/PATHWAY/PIANO/Kloss/result_diff_expr" ))
 
 ## up regulation
 mRNA <- as.character( result_diff_expr_mRNA [result_diff_expr_mRNA$change ==1,1] ) 
@@ -200,15 +200,15 @@ p_value <- names(p_value_list)[which(p_value_list<0.05)]
 return(p_value)
 }
 
-load("/Users/miyang/Documents/RWTH_Aachen/HELA/PATHWAY/PIANO/mRNA/GSEA_results.ro" ) 
+load(paste0(path,"/HELA/PATHWAY/PIANO/mRNA/GSEA_results.ro" ) )
 mRNA_up <- select_pathway(resList,"distinct","up") ; write.xlsx(mRNA_up, paste0(path,"/HELA/PATHWAY/PIANO/Venn/mRNA_up.xlsx" ) ) 
 mRNA_down <- select_pathway(resList,"distinct","down") ; write.xlsx(mRNA_down, paste0(path,"/HELA/PATHWAY/PIANO/Venn/mRNA_down.xlsx" ) )
 
-load("/Users/miyang/Documents/RWTH_Aachen/HELA/PATHWAY/PIANO/Prot/GSEA_results.ro" ) 
+load(paste0(path,"/HELA/PATHWAY/PIANO/Prot/GSEA_results.ro") ) 
 Prot_up <- select_pathway(resList,"distinct","up"); write.xlsx(Prot_up, paste0(path,"/HELA/PATHWAY/PIANO/Venn/Prot_up.xlsx" ) )
 Prot_down <- select_pathway(resList,"distinct","down"); write.xlsx(Prot_down, paste0(path,"/HELA/PATHWAY/PIANO/Venn/Prot_down.xlsx" ) )
 
-load("/Users/miyang/Documents/RWTH_Aachen/HELA/PATHWAY/PIANO/Kloss/GSEA_results.ro")
+load(paste0(path,"/HELA/PATHWAY/PIANO/Kloss/GSEA_results.ro") )
 Kloss_up <- select_pathway(resList,"distinct","up"); write.xlsx(Kloss_up, paste0(path,"/HELA/PATHWAY/PIANO/Venn/Kloss_up.xlsx" ) )
 Kloss_down <- select_pathway(resList,"distinct","down"); write.xlsx(Kloss_down, paste0(path,"/HELA/PATHWAY/PIANO/Venn/Kloss_down.xlsx" ) )
 

@@ -14,13 +14,13 @@ library(RCircos)
 library(openxlsx)
 library(ggplot2) ; library(ggsignif)
 path <- "~/Documents/RWTH_Aachen"
-source(paste(path,"/FUNCTIONS/general_functions.R", sep=""))
-source(paste(path,"/FUNCTIONS/PLOT.R", sep=""))
-source(paste(path,"/HELA/HELA_functions.R", sep=""))
-load("/Users/miyang/Documents/RWTH_Aachen/HELA/DATA/Hela_data_log.Rdata")
-load("/Users/miyang/Documents/RWTH_Aachen/HELA/DATA/Hela_data_original.Rdata")
-load("/Users/miyang/Documents/RWTH_Aachen/HELA/DATA/Hela_data_AVG.Rdata")
-protein_names <- read.csv("~/Documents/RWTH_Aachen/HELA/DATA/protein_names", row.names=1) ; protein_names <- protein_names$x
+source(paste0(path,"/FUNCTIONS/general_functions.R"))
+source(paste0(path,"/FUNCTIONS/PLOT.R"))
+source(paste0(path,"/HELA/HELA_functions.R"))
+load(paste0(path,"/HELA/DATA/Hela_data_log.Rdata"))
+load(paste0(path,"/HELA/DATA/Hela_data_original.Rdata"))
+load(paste0(path,"/HELA/DATA/Hela_data_AVG.Rdata"))
+protein_names <- read.csv(paste0(path,"/HELA/DATA/protein_names"), row.names=1) ; protein_names <- protein_names$x
 
 ### define orders
 Hela_CCL2 <- c(2,6,7,12,13,14)
@@ -145,7 +145,7 @@ ID_table$mRNA_Kloss <- NA ; ID_table$mRNA_Kloss[ which(ID_table$gene %in% names(
 ID_table$Prot_Kloss <- NA ; ID_table$Prot_Kloss[ which(ID_table$gene %in% names(corr_Prot_Kloss_ALL)) ] <- corr_Prot_Kloss_ALL
 
 spearman_layers_table <- ID_table
-write.xlsx(spearman_layers_table, "/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/circle_correlation/spearman_layers_table.xlsx")
+write.xlsx(spearman_layers_table,paste0(path,"/HELA/PLOT/circle_correlation/spearman_layers_table.xlsx"))
 
 ```
 
@@ -325,7 +325,7 @@ p_value <- c(p_value, signif(w$p.value, 4) )
  
 #### Pearson correlation
 colnames(data) <- c("Group", "variable", "Pearson_correlation") ;  
-pdf(file=paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/correlation_complexe/Pearson.pdf"), height=8, width=14, compress=TRUE)
+pdf(file=paste0(path,"/HELA/PLOT/correlation_complexe/Pearson.pdf"), height=8, width=14, compress=TRUE)
 ggplot(data=data ) + geom_boxplot(aes(x=Group, y=Pearson_correlation, fill=variable)) + 
 theme(legend.position="bottom",legend.text=element_text(size=20), axis.text=element_text(size= 20) , axis.title= element_text(size= 20), plot.title = element_text(size = rel(2.5), hjust = 0.5 ),panel.background = element_rect(fill='white'), panel.grid.major = element_line(colour = "grey90")  ) + ggtitle("Correlation analysis across 14 Hela cell lines")  + 
 geom_signif(stat="identity", test = "t.test" , data=data.frame(x=1:length(GR) - 0.125, xend=1:length(GR) + 0.125, y=c(1.1, 1.1), annotation=as.character(p_value)),
@@ -336,7 +336,7 @@ dev.off()
 
 #### Spearman correlation
 colnames(data) <- c("Group", "variable", "Spearman_correlation")  
-pdf(file=paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/correlation_complexe/Spearman.pdf"), height=8, width=14, compress=TRUE)
+pdf(file=paste0(path,"/HELA/PLOT/correlation_complexe/Spearman.pdf"), height=8, width=14, compress=TRUE)
 ggplot(data=data ) + geom_boxplot(aes(x=Group, y=Spearman_correlation, fill=variable)) + 
 theme(legend.position="bottom",legend.text=element_text(size=20), axis.text=element_text(size= 20) , axis.title= element_text(size= 20), plot.title = element_text(size = rel(2.5), hjust = 0.5 ),panel.background = element_rect(fill='white'), panel.grid.major = element_line(colour = "grey90") ) + ggtitle("Correlation analysis across 14 Hela cell lines") + 
 geom_signif(stat="identity", test = "t.test" , data=data.frame(x=1:length(GR) - 0.125, xend=1:length(GR) + 0.125, y=c(1.1, 1.1), annotation=as.character(p_value)),
@@ -346,12 +346,6 @@ dev.off()
 # data$Group <- factor(data$Group,levels = levels(c('CNV_mRNA','CNV_Prot','CNV_Kloss','mRNA_Prot','mRNA_Kloss','Prot_Kloss')),ordered = TRUE)
 # levels(data$Group) <- c('CNV_mRNA','CNV_Prot','CNV_Kloss','mRNA_Prot','mRNA_Kloss','Prot_Kloss')
 ```
-
-
-
-
-
-
 
 
 

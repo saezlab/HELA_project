@@ -1,19 +1,5 @@
 
-top_CV <- function(data,nb_up=500,nb_down=500) {   ### big misunderstanding, don't use this function
-CV_value <- c() ; for(gene in 1:length(data[,1])) { 
-  qq <- as.numeric(data[gene, ]) 
-  CV_value <- c(CV_value, sd( qq-mean(qq) ))
-}
-x <- cbind(data, CV_value)
-x <- x[complete.cases(x), ]
-x <- x[ order(-x[ ,length(colnames(x))]) , ]
-
-top <- rownames(x)[1:nb_up]
-down <- rownames(x)[(length(rownames(x))-nb_down+1):length(rownames(x))]
-
-all <- c(top,down) 
-return(all)
-}
+path <- "~/Documents/RWTH_Aachen"
 
 ###################################################### PLOTTING ######################################################
 
@@ -42,7 +28,7 @@ params <- RCircos.Get.Plot.Parameters()
 params$heatmap.color <- "BlueWhiteRed"
 RCircos.Reset.Plot.Parameters(params)
 
-setwd(paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/",folder) )
+setwd(paste0(path,"/HELA/PLOT/",folder) )
 
 # png(paste0(layer_name,".png"), width = 3000, height = 3000 ,pointsize = 60)
 # tiff(paste0(layer_name,".tiff"), width = 3000, height = 3000 ,pointsize = 60)
@@ -95,7 +81,7 @@ draw_by_layer_CV <- function(folder,layer_name,layer,circle_break=0.96,min,max) 
   cyto.band$BandColor <- "black" ; cyto.band$ChrColor <- "black"
   RCircos.Reset.Plot.Ideogram(cyto.band)
   
-  setwd(paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/",folder) )
+  setwd(paste0(path,"/HELA/PLOT/",folder) )
   
   ##### break the circle
   RCircos.ZoomOut.Chromosome(zoom.out.ratio=circle_break) 
@@ -145,7 +131,7 @@ draw_by_layer_CV_UniGroup_RANK_range01 <- function(folder,layer_list,circle_brea
   cyto.band$BandColor <- "white" ; cyto.band$ChrColor <- "white"
   RCircos.Reset.Plot.Ideogram(cyto.band)
   
-  setwd(paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/",folder) )
+  setwd(paste0(path,"/HELA/PLOT/",folder) )
   
   ##### break the circle
   RCircos.ZoomOut.Chromosome(zoom.out.ratio=circle_break) 
@@ -198,7 +184,7 @@ draw_by_layer_ratio <- function(folder,layer_list,circle_break=0.96,min,max) {
   cyto.band$BandColor <- "black" ; cyto.band$ChrColor <- "black"
   RCircos.Reset.Plot.Ideogram(cyto.band)
   
-  setwd(paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/",folder) )
+  setwd(paste0(path,"/HELA/PLOT/",folder) )
   
   ##### break the circle
   RCircos.ZoomOut.Chromosome(zoom.out.ratio=circle_break) 
@@ -254,7 +240,7 @@ draw_1_layer <- function(folder,title,data,circle_break=0.96,min,max) {
   cyto.band <- RCircos.Get.Plot.Ideogram()
   cyto.band$BandColor <- "black" ; cyto.band$ChrColor <- "black"
   RCircos.Reset.Plot.Ideogram(cyto.band)
-  setwd(paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/",folder) )
+  setwd(paste0(path,"/HELA/PLOT/",folder) )
   
   pdf(file=paste0(title,".pdf"), height=12, width=12, compress=TRUE)
   
@@ -283,7 +269,7 @@ draw_1_layer <- function(folder,title,data,circle_break=0.96,min,max) {
 ####################################################################################################################
 library(DMwR)
 Hela_heatmap_overlap_Prot <- function(x,folder,row_names,col_names,name_file,title,fontsize=24,fontsize_row=22, fontsize_col=22) {
-  setwd(paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/",folder) )
+  setwd(paste0(path,"/HELA/PLOT/",folder) )
 
   x <- x[apply(x, 1, function(y) !all(is.na(y))),] ; x <- x[ rowSums(x)!=0, ] 
   x <- x[complete.cases(x), ] ; x <- x[ rownames(x) %in% protein_names , ] ; # x <- t(knnImputation(t(x), 10)) ; 

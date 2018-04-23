@@ -1,0 +1,138 @@
+---
+title: "Hela project analysis PIANO"
+author: "MI YANG"
+date: "`r doc_date()`"
+vignette: >
+  %\VignetteIndexEntry{Bioconductor style for HTML documents}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+output: 
+  BiocStyle::html_document
+
+```{r include=FALSE, cache=FALSE}
+
+library(ggrepel)
+path <- "~/Documents/RWTH_Aachen"
+source(paste(path,"/FUNCTIONS/general_functions.R", sep=""))
+source(paste(path,"/HELA/HELA_functions.R", sep=""))
+source(paste(path,"/FUNCTIONS/PLOT.R", sep=""))
+load(paste(path,"/SANGER_DATA/MASTER_LIST_22112013.ro", sep="")) 
+load("/Users/miyang/Documents/RWTH_Aachen/HELA/DATA/Hela_data_log.Rdata")
+
+Hela_CCL2 <- c(2,6,7,12,13,14)
+Hela_11 <- 11
+Hela_S3 <- c(5)
+Hela_Kyoto <- c(1,3,4,8,9,10)
+ALL <- c(1:10,12:14)
+```
+
+
+# compare 12 and 14
+
+```{r include=FALSE, cache=FALSE}
+## 2:CNV, 3:mRNA, 4:Prot, 5:Kloss, 6:Let7, 7:ProtCopies
+
+comparison_plot <- function(feature_name, text_size= 30 , title_size = 1.5 )  {
+  x <- Hela_data_log[[feature_name]]
+  x <- x[apply(x,1,function(y) !all(is.na(y))), ]
+  x <- x[ ,c(12,14)]  ; x <- x[complete.cases(x) , ]
+  
+  baseline = x[ ,1] ; comparison = x[ ,2] ; name = rownames(x)
+  ###### baseline 
+  names(baseline) <- name ;  baseline <- baseline[order(baseline)]
+  target <- names(baseline)
+  ###### comparison
+  names(comparison) <- name
+  comparison <- comparison[match(target, names(comparison))]
+  baseline <- as.vector(baseline) ;comparison <- as.vector(comparison)   
+  tab <- as.data.frame(cbind(1:length(baseline), comparison, baseline) ); colnames(tab) <- c("index","Hela_14","Hela_12")
+  rownames(tab) <- target
+
+  tab$diffup <- tab[,2] - tab[,3] ; tab$diffdown <- tab[,3] - tab[,2]
+  tab_up <- tab[order(-tab$diffup), ]
+  tab_up <- tab_up[ 1:10, c(1,2,4) ]
+  tab_down <- tab[order(-tab$diffdown), ]
+  tab_down <- tab_down[ 1:10, c(1,2,5) ]
+  tab_up_down <- rbind(tab_up[ ,1:2],tab_down[ ,1:2])
+  label <- target[tab_up_down$index]
+
+  ggplot(tab, aes(x=index,y=Hela_14)) + 
+    geom_line(aes(y=Hela_14 , group=2 , colour="Hela_14"), size=1 ) + 
+    geom_line(aes(y=Hela_12 , group=1 , colour="Hela_12"), size=1.4) + 
+    geom_point(data=tab_up_down,aes(x=index,y=Hela_14),size=3) +  
+    ggtitle(paste0(feature_name," Hela 14 vs 12")) + 
+      xlab("ordered Protein/gene") + ylab("Measurement (log10 scale)") + scale_colour_manual(name="Cell line",  values=c("Hela_12"="violetred3","Hela_14"= "steelblue3")) + 
+      theme(legend.position="bottom", text = element_text(size=text_size) , axis.text=element_text(size= text_size) , axis.title= element_text(size= text_size), plot.title = element_text(size = rel(title_size), hjust = 0.5 ), panel.background = element_rect(fill='white'), panel.grid.major = element_line(colour = "grey90"))   + 
+    geom_text_repel(data=tab_up_down ,aes(label=label ), size=7 )  
+}
+
+library(cowplot)
+png(paste0(path,"/HELA/PLOT/LINE_PLOT/","12_vs_14.png"), width = 2800, height = 2000 ,pointsize = 60)
+# pdf(file = paste0(path,"/HELA/PLOT/LINE_PLOT/","12_vs_14.pdf"),width=40,  height=28, onefile = F)
+par(mfrow=c(2,2))
+a <- comparison_plot(feature_name = "mRNA")
+b <- comparison_plot(feature_name = "Prot")
+c <- comparison_plot(feature_name = "Kloss")
+d <- comparison_plot(feature_name = "Let7")
+plot_grid(a,b,c,d, ncol = 2, nrow = 2, scale = 0.9)
+dev.off()
+
+```
+
+
+# compare 11 versus CCL2
+
+```{r include=FALSE, cache=FALSE}
+
+comparison_plot <- function(feature_name, text_size= 30 , title_size = 1.5 )  {
+  x <- Hela_data_log[[feature_name]]
+  x <- x[apply(x,1,function(y) !all(is.na(y))), ]
+  x <- x[ ,c(Hela_11,Hela_CCL2)]  ; x <- x[complete.cases(x) , ]
+  x <- cbind( rowMeans(x[ ,2:length(colnames(x))]) , x[,1]  ) 
+  
+  baseline = x[ ,1] ; comparison = x[ ,2] ; name = rownames(x)
+  ###### baseline 
+  names(baseline) <- name ;  baseline <- baseline[order(baseline)]
+  target <- names(baseline)
+  ###### comparison
+  names(comparison) <- name
+  comparison <- comparison[match(target, names(comparison))]
+  baseline <- as.vector(baseline) ;comparison <- as.vector(comparison)   
+  tab <- as.data.frame(cbind(1:length(baseline), comparison, baseline) ); colnames(tab) <- c("index","Hela_11","Hela_CCL2")
+  rownames(tab) <- target
+  
+  result_diff_expr <- read.csv(paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PATHWAY/PIANO_1vsOthers/", feature_name, "/result_diff_expr"),row.names = 1)
+  up <- rownames(result_diff_expr)[which(result_diff_expr$change == 1)]
+  down <- rownames(result_diff_expr)[which(result_diff_expr$change == -1)]
+  
+  tab$diffup <- tab[,2] - tab[,3] ; tab$diffdown <- tab[,3] - tab[,2]
+  tab_up <- tab[order(-tab$diffup), ]
+  tab_up <- tab_up[ rownames(tab_up) %in% up , ] ; tab_up <- tab_up[ 1:10, c(1,2,4) ]
+  tab_down <- tab[order(-tab$diffdown), ]
+  tab_down <- tab_down[ rownames(tab_down) %in% down , ] ; tab_down <- tab_down[ 1:10, c(1,2,5) ]
+  tab_up_down <- rbind(tab_up[ ,1:2],tab_down[ ,1:2])
+  label <- target[tab_up_down$index]
+
+  ggplot(tab, aes(x=index,y=Hela_11)) + 
+    geom_line(aes(y=Hela_11 , group=2 , colour="Hela_11"), size=1 ) + 
+    geom_line(aes(y=Hela_CCL2 , group=1 , colour="Hela_CCL2"), size=1.4) + 
+    geom_point(data=tab_up_down,aes(x=index,y=Hela_11),size=3) +  
+    ggtitle(paste0(feature_name," Hela 11 vs CCL2")) + 
+      xlab("ordered Protein/gene") + ylab("Measurement (log10 scale)") + scale_colour_manual(name="Cell line", values=c("Hela_CCL2"="violetred3","Hela_11"= "steelblue3")) + 
+      theme(legend.position="bottom", text = element_text(size=text_size) , axis.text=element_text(size= text_size) , axis.title= element_text(size= text_size), plot.title = element_text(size = rel(title_size), hjust = 0.5 ), panel.background = element_rect(fill='white'), panel.grid.major = element_line(colour = "grey90")) + geom_text_repel(data=tab_up_down ,aes(label=label ), size=7 )  
+}
+
+
+library(cowplot)
+png(paste0(path,"/HELA/PLOT/LINE_PLOT/","11_vs_CCL2.png"), width = 2800, height = 2000 ,pointsize = 60)
+# pdf(file = paste0(path,"/HELA/PLOT/LINE_PLOT/","11_vs_CCL2.pdf"),width=40,  height=28, onefile = F)
+par(mfrow=c(2,2))
+a <- comparison_plot(feature_name = "mRNA")
+b <- comparison_plot(feature_name = "Prot")
+c <- comparison_plot(feature_name = "Kloss")
+d <- comparison_plot(feature_name = "Let7")
+plot_grid(a,b,c,d, ncol = 2, nrow = 2, scale = 0.9)
+dev.off()
+
+```
+

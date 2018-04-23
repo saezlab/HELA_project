@@ -1,0 +1,366 @@
+---
+title: "Hela project analysis PCA t-SNE"
+author: "MI YANG"
+date: "`r doc_date()`"
+vignette: >
+  %\VignetteIndexEntry{Bioconductor style for HTML documents}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+output: 
+  BiocStyle::html_document
+  
+```{r include=FALSE, cache=FALSE}  
+library(DMwR)
+library(FactoMineR)
+library(Rtsne)
+library(ggrepel)
+
+path <- "~/Documents/RWTH_Aachen"
+source(paste(path,"/FUNCTIONS/general_functions.R", sep=""))
+source(paste(path,"/FUNCTIONS/PLOT.R", sep=""))
+load(paste(path,"/SANGER_DATA/MASTER_LIST_22112013.ro", sep="")) 
+load("/Users/miyang/Documents/RWTH_Aachen/HELA/DATA/Hela_data_log.Rdata")
+load("~/Documents/RWTH_Aachen/SANGER_DATA/FEATURES/GEX_ALL.Rdata")
+
+load("~/Documents/RWTH_Aachen/RNAseq_GDSC_CCLE_genentech/RNAseq_GDSC_overlap.Rdata" )
+
+tissue_label_gdsc_ID <- read.csv("~/Documents/RWTH_Aachen/SANGER_DATA/tissue_label_gdsc_ID", row.names=1)
+
+Hela_CCL2 <- c(2,6,7,11,12,13,14)
+Hela_S3 <- c(5)
+Hela_Kyoto <- c(1,3,4,8,9,10)
+
+```
+
+# PCA on Hela: quantile normalization
+```{r include=FALSE, cache=FALSE}
+result_folder <- paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/PCA/") ; setwd(result_folder)
+############################################# choose Omics layer !!! #############################################
+## 2:CNV, 3:mRNA, 4:Prot, 5:Kloss, 6:Let7, 7:ProtCopies
+
+color_vec <- 1:14  
+color_vec[Hela_CCL2] <- "darkgreen"
+color_vec[Hela_S3] <- "blue"
+color_vec[Hela_Kyoto] <- "red"
+
+# tiff("PCA_combined_plot.tiff", width = 2800, height = 2000 ,pointsize = 30)
+pdf("PCA_combined_plot_quantile.pdf",width = 15, height = 10)
+par(mfrow=c(2,3))
+for(i in 2:7) {
+  x <- Hela_data_log[[i]] ; x <- x[apply(x, 1, function(y) !all(is.na(y))),]  ; x <- t(x)  
+  if( names(Hela_data_log)[i] %not in% c("Let7","CNV") ) { rownames(x) <- substr(rownames(x), 1, nchar(rownames(x))-6) } 
+  x <- t(knnImputation(t(x), 10))
+  x <- t(quantile_normalisation(t(x)))
+  
+  # pdf(file = paste0("PCA_",names(Hela_data_log)[i],".pdf"),width = 8, height = 8)
+  res.pca <- PCA(x, scale.unit=TRUE, ncp=5, graph=FALSE)
+  plot.PCA(res.pca, axes=c(1, 2), choix="ind", habillage = "ind", col.hab=color_vec, title=names(Hela_data_log)[i], cex.main=2 , cex=1.3)
+  if(i %in% c(2,4,7)) {legend(x="bottomright", legend =c("Hela_CCL2", "Hela_S3", "Hela_Kyoto"),fill = c("darkgreen", "blue", "red"), cex=1.3 )} else if (i == 6) {
+    legend(x="topleft", legend =c("Hela_CCL2", "Hela_S3", "Hela_Kyoto"),fill = c("darkgreen", "blue", "red"), cex=1.3 )
+  } else {legend(x="topright", legend =c("Hela_CCL2", "Hela_S3", "Hela_Kyoto"),fill = c("darkgreen", "blue", "red"), cex=1.3 ) }
+  # dev.off()
+  
+}
+dev.off()
+```
+
+# PCA on Hela: original's replicates. check biological variation < cell to cell variation
+```{r include=FALSE, cache=FALSE}
+
+result_folder <- paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/PCA/") ; setwd(result_folder)
+############################################# choose Omics layer !!! #############################################
+library(openxlsx)
+Proteome_all <- read.xlsx("/Users/miyang/Documents/RWTH_Aachen/HELA/ORIGINAL_DATA/Proteome_all161021_unlogged_ToMi.xlsx" )
+rownames(Proteome_all) <- Proteome_all[ ,1] ; Proteome_all <- Proteome_all[ ,-1]
+
+original <- Proteome_all[ ,grep("O", colnames(Proteome_all))]
+original <- original[ ,-which(colnames(original)=="Organism")]
+original <- log10(original)
+original <- data.matrix(original)
+original[original<1] <- 1
+
+color_vec <- 1:26  
+set.seed(22256111)  # 12221
+cols = rainbow(length(color_vec), s=.6, v=.9)[sample(1:length(color_vec),length(color_vec))] ## generate random color
+
+for(i in seq(1,length(color_vec),2) )  {
+  color_vec[i]   <- cols[i]
+  color_vec[i+1] <- cols[i]
+}
+
+pdf("PCA_reproducibility_quantile.pdf",width = 15, height = 10)
+  x <- quantile_normalisation(original) ; x <- t(x)
+  res.pca <- PCA(x, scale.unit=TRUE, ncp=5, graph=FALSE)
+  plot.PCA(res.pca, axes=c(1, 2), choix="ind", habillage = "ind", col.hab=color_vec, title="Paired proteomics replicates", cex.main=2 , cex=1.3)
+dev.off()
+
+mat <- subset_row_abs(original, 0.90, 1)
+plot_pheatmap(mat, row_names="Protein", col_names="Cells", title="Paired proteomics replicates", scale = "row")
+
+# RowVar <- function(x) { rowSums((x - rowMeans(x))^2)/(dim(x)[2] - 1) } ; which( RowVar(original) == 0 ) 
+```
+
+
+# t-SNE comparison Hela with GDSC
+
+```{r include=FALSE, cache=FALSE}
+load("~/Documents/RWTH_Aachen/RNAseq_GDSC_CCLE_genentech/RPKM/GDSC_RPKM.Rdata" )
+GDSC <- GDSC_RPKM   #  GDSC_RPKM   RNAseq_GDSC_overlap
+GDSC[GDSC==0] <- 0.001
+GDSC <- log10(GDSC)
+
+
+result_folder <- paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/t_SNE/") ; setwd(result_folder)
+############################################# choose Omics layer !!! #############################################
+##  2:CNV, 3:mRNA, 4:Prot, 5:Kloss, 6:Let7, 7:ProtCopies
+
+i <- 3 ## mRNA
+x <- Hela_data_log[[i]] ; x <- x[apply(x, 1, function(y) !all(is.na(y))),]  ; x <- t(x)  
+x <- knnImputation(t(x), 10) ; x <- t(x) ; rownames(x) <- substr(rownames(x), 1, nchar(rownames(x))-6)
+x <- x - mean(x)
+rownames(x) <- paste0("Hela_",1:14)
+x_Hela <- x
+
+## choose samples 
+common <- intersect(tissue_label_gdsc_ID$CosmicID, rownames(GDSC))
+tissue_label <- tissue_label_gdsc_ID[ tissue_label_gdsc_ID$CosmicID %in% common ,  ] 
+tissue_label <- tissue_label[ -which(tissue_label$tissue %in% names(which(table(tissue_label$tissue)<5)) ),   ]
+tissue_label$tissue <- as.character(tissue_label$tissue)
+tissue_label[tissue_label$CosmicID=="1298134",2] <- "GDSC_Hela"
+tissue_label[tissue_label$CosmicID=="687509", 2] <- "GDSC_HelaSF"
+tissue_label[tissue_label$tissue %in% c("lung","lung_NSCLC", "lung_SCLC"),2] <- "lung"
+
+common <- as.character(tissue_label$CosmicID)
+tissue <- as.character(tissue_label$tissue)
+x <- GDSC[common, ]
+
+## common genes
+common <- intersect(colnames(x_Hela), colnames(x))
+x_Hela <- x_Hela[,common] ; x <- x[ ,common] ; x <- data.matrix(x)
+x <- x - mean(x)
+x_GDSC <- x
+
+x_total <- rbind(x_Hela ,x_GDSC)
+x_total <- t(quantile_normalisation(t(x_total)))
+
+g <- 1:length(rownames(x_total))
+g[Hela_CCL2] <- "Hela_CCL2"
+g[Hela_S3] <- "Hela_S3"
+g[Hela_Kyoto] <- "Hela_Kyoto"
+g[ (length(rownames(x_Hela))+1):length(rownames(x_total)) ] <- tissue
+
+mydata <- x_total
+
+set.seed(6) ; rtsne_out <- Rtsne(as.matrix(mydata), perplexity = 20 , max_iter = 500, check_duplicates = FALSE) # 6 
+d_tsne_1 <- as.data.frame(rtsne_out$Y)
+d_tsne_1$'Cell_type' <- g
+
+plot_cluster=function(data, title, highlight_tissue)  
+{
+  label <- rownames(mydata) ; label[15:length(label)] <- ""
+  t <- tissue_label$CosmicID[which(tissue_label$tissue%in%highlight_tissue)]
+  highlight_tissue <- tissue_label$tissue[which(tissue_label$tissue%in%highlight_tissue)]
+  label[ which(rownames(mydata) %in% t) ] <- highlight_tissue
+  
+  p <- ggplot(data, aes_string(x="V1", y="V2", color="Cell_type") ) + geom_point(size=5) + guides(colour=guide_legend(override.aes=list(size=14))) + xlab("") + ylab("") + ggtitle(title) + theme_light(base_size=25) + 
+  theme(axis.text.x=element_blank(),axis.text.y=element_blank(),legend.direction = "horizontal",legend.position = "bottom",legend.box = "horizontal",plot.title = element_text(size = rel(3), hjust = 0.5 )) + 
+  geom_text_repel(aes(label=label ), size=12)  #   ,hjust= -0.1 , vjust= -0.4
+  p + scale_color_manual(values=cols)
+}
+
+set.seed(22256111)  # 12221
+cols = rainbow(length(table(g)), s=.6, v=.9)[sample(1:length(table(g)),length(table(g)))] ## generate random color
+pdf(file="t_SNE_Hela_GDSC_mRNA_center_bind_quantile.pdf", width = 24, height = 18 )
+plot_cluster( data=d_tsne_1 , title="t-SNE Hela vs GDSC (RNAseq)", highlight_tissue=c("GDSC_Hela") )  
+dev.off()
+
+```
+
+
+# t-SNE comparison Hela with Fibroblast
+
+```{r include=FALSE, cache=FALSE}
+result_folder <- paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/t_SNE/") ; setwd(result_folder)
+
+Fibro_Prot <- read.xlsx("/Users/miyang/Documents/RWTH_Aachen/HELA/ORIGINAL_DATA/FibroblastCells_Protein_Kloss_ForHelaMi.xlsx" ,1)
+Fibro_Kloss <- read.xlsx("/Users/miyang/Documents/RWTH_Aachen/HELA/ORIGINAL_DATA/FibroblastCells_Protein_Kloss_ForHelaMi.xlsx",2)
+merged_v2 <- Hela_data_log$merged_v2
+colnames(merged_v2)
+ID_table <- cbind(rownames(merged_v2), merged_v2$SP_Identified) ; ID_table <- ID_table[complete.cases(ID_table), ]
+
+Fibro_Prot <- Fibro_Prot[ Fibro_Prot$SwissProt.Protein.ID %in% ID_table[,2] , ]
+rownames(Fibro_Prot) <- Fibro_Prot[,1] ; Fibro_Prot <- Fibro_Prot[,-1]
+Fibro_Kloss <- Fibro_Kloss[ Fibro_Kloss$Protein %in% ID_table[,2] , ]
+rownames(Fibro_Kloss) <- Fibro_Kloss[,1] ; Fibro_Kloss <- Fibro_Kloss[,-1]
+
+ID_table <- cbind(rownames(merged_v2), merged_v2$SP_Identified)
+Prot <- Hela_data_log$Prot   ; rownames(Prot) <- ID_table[,2]  ; Prot <- Prot[complete.cases(Prot), ]
+Kloss <- Hela_data_log$Kloss ; rownames(Kloss) <- ID_table[,2] ; Kloss <- Kloss[complete.cases(Kloss), ]
+
+common_Prot <- intersect(rownames(Prot),rownames(Fibro_Prot))
+Prot <- Prot[common_Prot, ] ; Fibro_Prot <- Fibro_Prot[common_Prot, ]
+Fibro_Prot <- data.matrix(Fibro_Prot) ; Fibro_Prot <- knnImputation(Fibro_Prot, 10)
+
+common_Kloss <- intersect(rownames(Kloss),rownames(Fibro_Kloss))
+Kloss <- Kloss[common_Kloss, ] ; Fibro_Kloss <- Fibro_Kloss[common_Kloss, ]
+Fibro_Kloss <- data.matrix(Fibro_Kloss); Fibro_Kloss <- knnImputation(Fibro_Kloss, 10)
+
+
+```
+
+```{r include=FALSE, cache=FALSE}
+
+Fibro_Prot_t <- Fibro_Prot[ ,grep("t", colnames(Fibro_Prot))]
+Fibro_Prot_S <- Fibro_Prot[ ,grep("N_S", colnames(Fibro_Prot))]
+Fibro_Prot_S <- cbind(Fibro_Prot_S, Fibro_Prot[ ,grep("DS_S", colnames(Fibro_Prot))] ) 
+Prot <- Prot - mean(Prot)
+Fibro_Prot_t <- Fibro_Prot_t - mean(Fibro_Prot_t)
+Fibro_Prot_S <- Fibro_Prot_S - mean(Fibro_Prot_S)
+x_total_Prot <- cbind(Prot , Fibro_Prot_t , Fibro_Prot_S )
+x_total_Prot <- t(quantile_normalisation(x_total_Prot))
+
+# Prot <- Prot - mean(Prot)
+# Fibro_Prot <- Fibro_Prot - mean(Fibro_Prot)
+# x_total_Prot <- cbind(Prot , Fibro_Prot)
+# x_total_Prot <- t(quantile_normalisation(x_total_Prot))
+
+mydata <- x_total_Prot
+
+g <- 1:length(rownames(mydata))
+g[Hela_CCL2] <- "Hela_CCL2"
+g[Hela_S3] <- "Hela_S3"
+g[Hela_Kyoto] <- "Hela_Kyoto"
+g[ grep("DS",rownames(mydata)) ] <- "DS"
+g[ grep("N",rownames(mydata)) ] <- "Normal"
+
+set.seed(6) ; rtsne_out <- Rtsne(as.matrix(mydata), perplexity = 10 , max_iter = 500, check_duplicates = FALSE) # 6 
+d_tsne_1 <- as.data.frame(rtsne_out$Y)
+d_tsne_1$'Cell_type' <- g
+
+plot_cluster=function(data, title )  
+{
+  label <- rownames(mydata) 
+  p <- ggplot(data, aes_string(x="V1", y="V2", color="Cell_type") ) + geom_point(size=5) + guides(colour=guide_legend(override.aes=list(size=14))) + xlab("") + ylab("") + ggtitle(title) + theme_light(base_size=25) + 
+  theme(axis.text.x=element_blank(),axis.text.y=element_blank(),legend.direction = "horizontal",legend.position = "bottom",legend.box = "horizontal",plot.title = element_text(size = rel(3), hjust = 0.5 )) + 
+  geom_text_repel(aes(label=label ), size=12)  #   ,hjust= -0.1 , vjust= -0.4
+  p + scale_color_manual(values=cols)
+}
+
+set.seed(1255773)  # 13
+cols = rainbow(length(table(g)), s=.6, v=.9)[sample(1:length(table(g)),length(table(g)))] ## generate random color
+pdf(file="t_SNE_Hela_Fibroblast_Prot_center_bind_quantile.pdf", width = 24, height = 18 )
+plot_cluster( data=d_tsne_1 , title="t-SNE Hela vs Fibroblast (Protein)" )  
+dev.off()
+
+ 
+```
+
+
+```{r include=FALSE, cache=FALSE}
+
+Kloss <- Kloss - mean(Kloss)
+Fibro_Kloss <- Fibro_Kloss - mean(Fibro_Kloss)
+x_total_Kloss <- cbind(Kloss , Fibro_Kloss)
+x_total_Kloss <- t(quantile_normalisation(x_total_Kloss))
+
+mydata <- x_total_Kloss
+rownames(mydata) <- substr(rownames(mydata), 1, nchar(rownames(mydata)) - 6)
+
+g <- 1:length(rownames(mydata))
+g[Hela_CCL2] <- "Hela_CCL2"
+g[Hela_S3] <- "Hela_S3"
+g[Hela_Kyoto] <- "Hela_Kyoto"
+g[ grep("DS",rownames(mydata)) ] <- "DS"
+g[ grep("N",rownames(mydata)) ] <- "Normal"
+
+set.seed(6) ; rtsne_out <- Rtsne(as.matrix(mydata), perplexity = 5 , max_iter = 500, check_duplicates = FALSE) # 6 
+d_tsne_1 <- as.data.frame(rtsne_out$Y)
+d_tsne_1$'Cell_type' <- g
+
+plot_cluster=function(data, title )  
+{
+  label <- rownames(mydata) 
+  p <- ggplot(data, aes_string(x="V1", y="V2", color="Cell_type") ) + geom_point(size=5) + guides(colour=guide_legend(override.aes=list(size=14))) + xlab("") + ylab("") + ggtitle(title) + theme_light(base_size=25) + 
+  theme(axis.text.x=element_blank(),axis.text.y=element_blank(),legend.direction = "horizontal",legend.position = "bottom",legend.box = "horizontal",plot.title = element_text(size = rel(3), hjust = 0.5 )) + 
+  geom_text_repel(aes(label=label ), size=12)  #   , hjust= -0.1 , vjust= -0.4
+  p + scale_color_manual(values=cols)
+}
+
+set.seed(14321)  # 13
+cols = rainbow(length(table(g)), s=.6, v=.9)[sample(1:length(table(g)),length(table(g)))] ## generate random color
+pdf(file="t_SNE_Hela_Fibroblast_Kloss_center_bind_quantile.pdf", width = 24, height = 18 )
+plot_cluster( data=d_tsne_1 , title="t-SNE Hela vs Fibroblast (Kloss)" )  
+dev.off()
+
+ 
+```
+
+
+
+# PCA Hela vs Fibroblast Prot
+```{r include=FALSE, cache=FALSE}
+mydata <- x_total_Prot
+g <- 1:length(x_total_Prot[,1]) 
+set.seed(11)  # 13
+cols = rainbow(5, s=.6, v=.9)[sample(1:5,5)] ## generate random color
+
+g[Hela_CCL2] <- cols[1]
+g[Hela_S3] <- cols[2]
+g[Hela_Kyoto] <- cols[3]
+g[ grep("DS",rownames(mydata)) ] <- cols[4]
+g[ grep("N",rownames(mydata)) ] <- cols[5]
+
+res.pca <- PCA( x_total_Prot , scale.unit=F, ncp=5, graph=FALSE)
+
+# pdf(file="PCA_Hela_Fibroblast_Prot_center_bind_quantile.pdf", width = 24, height = 18 )
+plot.PCA(res.pca, axes=c(1, 2), choix="ind", habillage = "ind", col.hab=g)
+legend(x="topleft", legend =c("Hela_CCL2", "Hela_S3", "Hela_Kyoto","DS","Normal"),fill = cols )
+dev.off()
+
+```
+
+# PCA Hela vs Fibroblast Kloss
+```{r include=FALSE, cache=FALSE}
+mydata <- x_total_Kloss
+g <- 1:length(x_total_Kloss[,1]) 
+set.seed(11)  # 13
+cols = rainbow(5, s=.6, v=.9)[sample(1:5,5)] ## generate random color
+
+g[Hela_CCL2] <- cols[1]
+g[Hela_S3] <- cols[2]
+g[Hela_Kyoto] <- cols[3]
+g[ grep("DS",rownames(mydata)) ] <- cols[4]
+g[ grep("N",rownames(mydata)) ] <- cols[5]
+
+res.pca <- PCA( mydata , scale.unit=F, ncp=5, graph=FALSE)
+
+# pdf(file="PCA_Hela_Fibroblast_Kloss_center_bind_quantile.pdf", width = 24, height = 18 )
+plot.PCA(res.pca, axes=c(1, 2), choix="ind", habillage = "ind", col.hab=g)
+legend(x="topleft", legend =c("Hela_CCL2", "Hela_S3", "Hela_Kyoto","DS","Normal"),fill = cols )
+dev.off()
+
+```
+
+# PCA comparison Hela with GDSC
+
+```{r include=FALSE, cache=FALSE}
+result_folder <- paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/t_SNE/") ; setwd(result_folder)
+
+color_vec <- 1:length(x_total[,1]) 
+color_vec[Hela_CCL2] <- "darkgreen"
+color_vec[Hela_S3] <- "blue"
+color_vec[Hela_Kyoto] <- "red"
+color_vec[15:length(x_total[,1])] <- "grey"
+
+res.pca <- PCA( x_total , scale.unit=F, ncp=5, graph=FALSE)
+
+pdf(file="PCA_Hela_GDSC_mRNA_center_bind_quantile.pdf", width = 24, height = 18 )
+plot.PCA(res.pca, axes=c(1, 2), choix="ind", habillage = "ind", col.hab=color_vec)
+legend(x="topright", legend =c("Hela_CCL2", "Hela_S3", "Hela_Kyoto","GDSC"),fill = c("darkgreen", "blue", "red","grey") )
+dev.off()
+
+# p <- res.pca$ind ;  p <- p$coord[ ,1:2] ;  p <- cbind(p ,d_tsne_1$Cell_type); colnames(p) <- c("V1","V2","Cell_type")
+# pdf(file="PCA_Hela_GDSC_mRNA_center_bind_quantile.pdf", width = 24, height = 18 )
+# plot_cluster( data=p , title="PCA Hela vs GDSC (RNAseq)", highlight_tissue="cervix" )  
+# dev.off()
+```

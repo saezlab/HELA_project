@@ -1,0 +1,146 @@
+---
+title: "Hela project analysis PIANO"
+author: "MI YANG"
+date: "`r doc_date()`"
+vignette: >
+  %\VignetteIndexEntry{Bioconductor style for HTML documents}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+output: 
+  BiocStyle::html_document
+
+```{r include=FALSE, cache=FALSE}
+library(piano)
+library(limma)
+
+path <- "~/Documents/RWTH_Aachen"
+source(paste(path,"/FUNCTIONS/general_functions.R", sep=""))
+source(paste(path,"/HELA/HELA_functions.R", sep=""))
+source(paste(path,"/FUNCTIONS/PLOT.R", sep=""))
+load(paste(path,"/SANGER_DATA/MASTER_LIST_22112013.ro", sep="")) 
+load("/Users/miyang/Documents/RWTH_Aachen/HELA/DATA/Hela_data_log.Rdata")
+
+Hela_CCL2 <- c(2,6,7,12,13,14)
+Hela_11 <- 11
+
+```
+
+# Compare 1 CCL2 versus other CCL2
+
+```{r include=FALSE, cache=FALSE}
+############################################# choose Omics layer !!! #############################################
+## 2:CNV, 3:mRNA, 4:Prot, 5:Kloss, 6:Let7, 7:ProtCopies
+feature_name <- "mRNA"
+x <- Hela_data_log[[feature_name]] ; x <- x[apply(x, 1, function(y) !all(is.na(y))), ] ; 
+
+# result folder
+result_folder <- paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PATHWAY/PIANO_11vsCCL2/", feature_name) ; setwd(result_folder) 
+
+# control
+test_1 <- x[ , Hela_CCL2 ] ; name_test_1 <- "Hela_CCL2"
+# case
+test_2 <- x[ , Hela_11 ]  ; name_test_2 <- "Hela_11"
+test_2 <- as.matrix(test_2)   
+
+common <- intersect(rownames(test_2), rownames(test_1))
+test_2 <- test_2[common, ] ; test_1 <- test_1[common, ] 
+test_2 <- as.matrix(test_2) ; colnames(test_2) <- "Hela_11"
+expr_mat <- cbind(test_1,test_2) 
+
+targets <- data.frame(Cell = 1:length(colnames(expr_mat)), Type = 1)  
+rownames(targets) <- colnames(expr_mat)
+targets$Type <- c(rep(name_test_1, length(colnames(test_1))), rep(name_test_2, 1)) # if one group against a single sample
+
+#Adjust a linear model to the expression data, and obtain differentially expressed genes
+f <- factor(targets$Type, levels= c(name_test_1,name_test_2))
+design <- model.matrix(~0+f)
+colnames(design) <- c(name_test_1,name_test_2)
+fit <- lmFit(expr_mat, design) ## expr_mat <- abs(expr_mat)
+#Contrasts 
+cont.matrix <- makeContrasts(change = Hela_11 - Hela_CCL2 ,levels=design)
+#Empirical Bayes
+fit2 <- contrasts.fit(fit, cont.matrix)
+fit2 <- eBayes(fit2)
+
+#Extract the result table
+tableTop <- topTable(fit2, coef = 1, adjust = "fdr", n = 10000,p.value=0.05)
+volcano_nice(tableTop,hAss=0.1,vAss=0.5,FCIndex=1,pValIndex=5)
+
+result_diff_expr <- decideTests(fit2, method="global",adjust.method="fdr",p.value=0.05) #   p.value=0.05  lfc = 0.6
+result_diff_expr <- as.data.frame(result_diff_expr)
+Hela_11_pos  <- rownames(result_diff_expr)[which(result_diff_expr$change == 1)]
+Hela_11_neg <- rownames(result_diff_expr)[which(result_diff_expr$change == -1)]
+storedata(result_diff_expr, result_folder)
+
+tableTop_pvalue_FC <- tableTop[ ,c(5,1)] ; colnames(tableTop_pvalue_FC)[2] <- "Log10FC"
+tableTop_pvalue_FC <- cbind(rownames(tableTop_pvalue_FC),tableTop_pvalue_FC)
+colnames(tableTop_pvalue_FC)[1]<-"Protein"
+write.xlsx(tableTop_pvalue_FC, paste0(result_folder,"/","tableTop_",feature_name,".xlsx"))
+
+```
+
+
+
+# GSEA
+```{r include=FALSE, cache=FALSE}
+# Gene Set Annotation, Define your specific Gene set collection
+GSC <- read.table(paste("/Users/miyang/Documents/RWTH_Aachen/GENERAL_DATA/GSEA_Hallmarksets_mod.txt",sep=""), header = FALSE, sep = "\t")
+GSC <- loadGSC(GSC)
+load("/Users/miyang/Documents/RWTH_Aachen/TUTORIALS/SLAPenrich-master/MSigDB/MSigDB_SL_format.RData"  ) 
+GSC[[1]] <- MSigDB_SL_format$HGNC_SYMBOL
+
+###
+# RUN: Remember to define the correct path of your results, for each hallmark set
+###
+pval <- data.frame(tableTop$adj.P.Val)
+rownames(pval) <-rownames(tableTop)
+Fchange <- data.frame(tableTop$logFC)
+rownames(Fchange) <- rownames(tableTop)
+tval <- data.frame(tableTop$t)
+rownames(tval) <-rownames(tableTop)
+gsaRes1 <- runGSA(tval,gsc=GSC,geneSetStat = "mean"   ,gsSizeLim=c(5,300))            ; #save(gsaRes1,file = paste(result_folder,"/gsaRes1.ro",sep=""))
+gsaRes2 <- runGSA(tval,gsc=GSC,geneSetStat = "median" ,gsSizeLim=c(5,300))            ; #save(gsaRes2,file = paste(result_folder,"/gsaRes2.ro",sep=""))
+gsaRes3 <- runGSA(tval,gsc=GSC,geneSetStat = "sum"    ,gsSizeLim=c(5,300))            ; #save(gsaRes3,file = paste(result_folder,"/gsaRes3.ro",sep=""))
+gsaRes4 <- runGSA(tval,gsc=GSC,geneSetStat = "maxmean",gsSizeLim=c(5,300))            ; #save(gsaRes4,file = paste(result_folder,"/gsaRes4.ro",sep=""))
+gsaRes5 <- runGSA(pval,Fchange,gsc=GSC,geneSetStat= "fisher",gsSizeLim=c(5,300))      ; #save(gsaRes5,file = paste(result_folder,"/gsaRes5.ro",sep=""))
+gsaRes6 <- runGSA(pval,Fchange,gsc=GSC,geneSetStat= "stouffer",gsSizeLim=c(5,300))    ; #save(gsaRes6,file = paste(result_folder,"/gsaRes6.ro",sep=""))
+gsaRes7 <- runGSA(pval,Fchange,gsc=GSC,geneSetStat= "tailStrength",gsSizeLim=c(5,300)); #save(gsaRes7,file = paste(result_folder,"/gsaRes7.ro",sep=""))
+
+resList <- list(gsaRes1,gsaRes2,gsaRes3,gsaRes4,gsaRes5,gsaRes6,gsaRes7)
+names(resList) <- c("mean","median","sum","maxmean","fisher","stouffer","tailStrength")
+save(resList,file = paste(result_folder,"/GSEA_results.ro",sep=""))
+
+# Plot the consensus: The real analysis is performed at Ranks_behaviour
+load(paste(result_folder,"/GSEA_results.ro",sep=""))
+
+pdf(file = "Consensus_Heatmap.pdf",width = 14, height = 12)
+ch <- consensusHeatmap(resList,cutoff=10,method="median", ncharLabel = 70, cellnote = "consensusScore", cex = 1 ,plot = TRUE) 
+dev.off()
+
+consensus_mm_no_reac <- ch$pMat  ;  head(consensus_mm_no_reac)
+
+class = "distinct" ; direction = "down"
+pdf(file = paste0(class,"_",direction,".pdf"),width = 18,height=14)
+cs <- piano::consensusScores(resList,class,direction,n=50,cexLabel=1.1,cexLegend=2.5)
+dev.off()
+class = "distinct" ; direction = "up"
+pdf(file = paste0(class,"_",direction,".pdf"),width=18,  height=14)
+cs <- piano::consensusScores(resList,class,direction,n=50,cexLabel=1.1,cexLegend=2.5)
+dev.off()
+class = "mixed" ; direction = "down"
+pdf(file = paste0(class,"_",direction,".pdf"),width=18,  height=14)
+cs <- piano::consensusScores(resList,class,direction,n=50,cexLabel=1.1,cexLegend=2.5)
+dev.off()
+class = "mixed" ; direction = "up"
+pdf(file = paste0(class,"_",direction,".pdf"),width=18,  height=14)
+cs <- piano::consensusScores(resList,class,direction,n=50,cexLabel=1.1,cexLegend=2.5)
+dev.off()
+
+```
+
+
+
+
+
+
+

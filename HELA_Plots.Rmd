@@ -1,0 +1,359 @@
+---
+title: "Hela project plots"
+author: "MI YANG"
+date: "`r doc_date()`"
+vignette: >
+  %\VignetteIndexEntry{Bioconductor style for HTML documents}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+output: 
+  BiocStyle::html_document
+---
+```{r include=FALSE, cache=FALSE}
+library(RCircos)
+library(openxlsx)
+library(ggplot2) ; library(ggsignif)
+path <- "~/Documents/RWTH_Aachen"
+source(paste(path,"/FUNCTIONS/general_functions.R", sep=""))
+source(paste(path,"/FUNCTIONS/PLOT.R", sep=""))
+source(paste(path,"/HELA/HELA_functions.R", sep=""))
+load("/Users/miyang/Documents/RWTH_Aachen/HELA/DATA/Hela_data_log.Rdata")
+load("/Users/miyang/Documents/RWTH_Aachen/HELA/DATA/Hela_data_original.Rdata")
+load("/Users/miyang/Documents/RWTH_Aachen/HELA/DATA/Hela_data_AVG.Rdata")
+protein_names <- read.csv("~/Documents/RWTH_Aachen/HELA/DATA/protein_names", row.names=1) ; protein_names <- protein_names$x
+
+### define orders
+Hela_CCL2 <- c(2,6,7,12,13,14)
+Hela_S3 <- c(5)
+Hela_Kyoto <- c(1,3,4,8,9,10)
+Hela_total <- 1:14
+Hela_total_order_Liu <- c(5,12,14,13,6,7,2,11,10,1,9,3,4,8)
+CV_group <- list(Hela_Kyoto, Hela_CCL2, Hela_total)
+```
+
+
+## Draw different layers
+```{r include=FALSE, cache=FALSE}
+
+png("combined_plot.png", width = 3000, height = 3000 ,pointsize = 60)
+# pdf(file=paste0("combined_plot.pdf"), height=12, width=12, compress=TRUE)
+# tiff(file=paste0("combined_plot.tiff"), width = 3000, height = 3000 ,pointsize = 60)
+par(mfrow=c(2,2))
+x <- Hela_data_log$CNV ; x <- 2^x ; x <- x*2 ; x[x==min(x)]<-0 ; x[x>5]<-5
+draw_by_layer(folder="circle_by_layer",layer_name="CNV", layer=x, min=0,max=5 )
+x <- Hela_data_log$mRNA ; x <- x[complete.cases(x), ] ; x <- scale(x, center = T, scale=F) ; x <- quantile_normalisation(x) 
+draw_by_layer(folder="circle_by_layer",layer_name="mRNA", layer=x,min=-3,max=3)
+x <- Hela_data_log$Prot ; x <- x[complete.cases(x), ] ; x <- scale(x, center = T, scale=F) ; x <- quantile_normalisation(x) 
+draw_by_layer(folder="circle_by_layer",layer_name="Proteomics", layer=x,min=-3,max=3)
+x <- Hela_data_log$Kloss  ; x <- x[complete.cases(x), ] ; x <- scale(x, center = T, scale=F) ; x <- quantile_normalisation(x) 
+draw_by_layer(folder="circle_by_layer",layer_name="Kloss", layer=x,min=-2,max=2)
+dev.off()
+
+```
+
+
+## Draw different layers using STD of ratio(Cell / AVG) 
+```{r include=FALSE, cache=FALSE}
+png("combined_plot.png", width = 3000, height = 3000 ,pointsize = 60)
+# pdf(file=paste0("combined_plot.pdf"), height=12, width=12, compress=TRUE)
+par(mfrow=c(2,2))
+draw_by_layer_CV (folder="circle_by_layer_CV",layer_name="CNV"       ,layer=Hela_data_log$CNV  ,circle_break=0.93,min=0 ,max=0.5)
+draw_by_layer_CV (folder="circle_by_layer_CV",layer_name="mRNA"      ,layer=Hela_data_AVG$mRNA ,circle_break=0.93,min=0 ,max=0.5)
+draw_by_layer_CV (folder="circle_by_layer_CV",layer_name="Proteomics",layer=Hela_data_AVG$Prot ,circle_break=0.93,min=0 ,max=0.5)
+draw_by_layer_CV (folder="circle_by_layer_CV",layer_name="Kloss"     ,layer=Hela_data_AVG$Kloss,circle_break=0.93,min=0 ,max=0.5)
+dev.off()
+```
+
+
+## CV plot: 4 rings (CNV,mRNA,Prot,Kloss) for group of 14 cells
+```{r include=FALSE, cache=FALSE}
+layer_list <- list(Hela_data_AVG$Kloss,Hela_data_AVG$Prot,Hela_data_AVG$mRNA,Hela_data_log$CNV)
+png("CV_UniGroup_RANK_range01.png", width = 3000, height = 3000 ,pointsize = 60)
+# pdf(file=paste0("CV_UniGroup_RANK_range01.pdf"), height=12, width=12, compress=TRUE)
+draw_by_layer_CV_UniGroup_RANK_range01 (folder="circle_by_layer_CV",layer=layer_list, circle_break=0.93, color_choice = "GreenBlackRed")
+dev.off()
+
+```
+
+
+## 4 rings (CNV,mRNA,Prot,Kloss), RATIO of mean: CCL2/KYOTO
+```{r include=FALSE, cache=FALSE}
+x <- Hela_data_log$CNV ; x <- 2^x ; x <- x*2  #  hist(x[ ,Hela_Kyoto], 100)
+layer_list <- list(Hela_data_original$Kloss,Hela_data_original$Prot,Hela_data_original$mRNA,x)
+png("Ratio_CCL2_Kyoto.png", width = 3000, height = 3000 ,pointsize = 60)
+# pdf(file=paste0("Ratio_CCL2_Kyoto.pdf"), height=12, width=12, compress=TRUE)
+draw_by_layer_ratio (folder="ratio_CCL2_Kyoto",layer_list=layer_list, circle_break=0.93 ,min=-1,max=1)
+dev.off()
+
+```
+
+
+## Circos plot of Spearman corrrelation: mRNA_Prot , CNV_Kloss , CNV_mRNA
+```{r include=FALSE, cache=FALSE}
+## corr_by_row: change into SPEARMAN !!!
+CNV <- Hela_data_log$CNV ; colnames(CNV) <- as.character(1:14)
+mRNA <- Hela_data_log$mRNA; colnames(mRNA) <- as.character(1:14)
+Prot <- Hela_data_log$Prot; colnames(Prot) <- as.character(1:14)
+Kloss <- Hela_data_log$Kloss; colnames(Kloss) <- as.character(1:14)
+
+MAT_LIST <- list(mRNA,Prot)
+a <- common_full(MAT_LIST)[[1]]
+b <- common_full(MAT_LIST)[[2]]
+corr_mRNA_Prot_ALL <- corr_by_row(a,b)
+
+MAT_LIST <- list(CNV,mRNA)
+a <- common_full(MAT_LIST)[[1]]
+b <- common_full(MAT_LIST)[[2]]
+corr_CNV_mRNA_ALL <- corr_by_row(a,b)
+
+MAT_LIST <- list(CNV,Kloss)
+a <- common_full(MAT_LIST)[[1]]
+b <- common_full(MAT_LIST)[[2]]
+corr_CNV_Kloss_ALL <- corr_by_row(a,b)
+
+MAT_LIST <- list(CNV,Prot)
+a <- common_full(MAT_LIST)[[1]]
+b <- common_full(MAT_LIST)[[2]]
+corr_CNV_Prot_ALL <- corr_by_row(a,b)
+
+MAT_LIST <- list(mRNA,Kloss)
+a <- common_full(MAT_LIST)[[1]]
+b <- common_full(MAT_LIST)[[2]]
+corr_mRNA_Kloss_ALL <- corr_by_row(a,b)
+
+MAT_LIST <- list(Prot,Kloss)
+a <- common_full(MAT_LIST)[[1]]
+b <- common_full(MAT_LIST)[[2]]
+corr_Prot_Kloss_ALL <- corr_by_row(a,b)
+
+draw_1_layer ( folder="circle_correlation",title="mRNA Prot correlation" , data=corr_mRNA_Prot_ALL , circle_break=0.96 , min=-1 , max=1 )
+draw_1_layer ( folder="circle_correlation",title="CNV  mRNA correlation" , data=corr_CNV_mRNA_ALL  , circle_break=0.96 , min=-1 , max=1 )
+draw_1_layer ( folder="circle_correlation",title="CNV  Kloss correlation", data=corr_CNV_Kloss_ALL , circle_break=0.96 , min=-1 , max=1 )
+
+```
+
+## Spearman Table for 6 pairs of omics correlation
+```{r include=FALSE, cache=FALSE}
+merged_v2 <- Hela_data_log$merged_v2
+ID_table <- cbind(rownames(merged_v2), merged_v2$SP_Identified) ; colnames(ID_table)<- c("gene", "SP_ID") ; ID_table <- as.data.frame(ID_table)
+
+ID_table$mRNA_Prot <- NA ; ID_table$mRNA_Prot[ which(ID_table$gene %in% names(corr_mRNA_Prot_ALL)) ] <- corr_mRNA_Prot_ALL
+ID_table$CNV_mRNA <- NA ; ID_table$CNV_mRNA[ which(ID_table$gene %in% names(corr_CNV_mRNA_ALL)) ] <- corr_CNV_mRNA_ALL
+ID_table$CNV_Kloss <- NA ; ID_table$CNV_Kloss[ which(ID_table$gene %in% names(corr_CNV_Kloss_ALL)) ] <- corr_CNV_Kloss_ALL
+ID_table$CNV_Prot <- NA ; ID_table$CNV_Prot[ which(ID_table$gene %in% names(corr_CNV_Prot_ALL)) ] <- corr_CNV_Prot_ALL
+ID_table$mRNA_Kloss <- NA ; ID_table$mRNA_Kloss[ which(ID_table$gene %in% names(corr_mRNA_Kloss_ALL)) ] <- corr_mRNA_Kloss_ALL
+ID_table$Prot_Kloss <- NA ; ID_table$Prot_Kloss[ which(ID_table$gene %in% names(corr_Prot_Kloss_ALL)) ] <- corr_Prot_Kloss_ALL
+
+spearman_layers_table <- ID_table
+write.xlsx(spearman_layers_table, "/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/circle_correlation/spearman_layers_table.xlsx")
+
+```
+
+
+
+## Heatmap of different layers
+
+```{r include=FALSE, cache=FALSE}
+########### change pheatmap scale to "row" !!!!!!!!!! ###########
+col1= colorRampPalette(c("white","grey","black"))(50) # For CNV
+col2= colorRampPalette(c("blue","white","red"))(50) # For mRNA
+# col3: default color of pheatmap for protein.
+col4= colorRampPalette(c("yellow", "white", "blue"))(50) # for protein turnover
+col5= colorRampPalette(c("green", "white", "red"))(50) #  for ratio
+
+Hela_heatmap_overlap_Prot(Hela_data_log$CNV,folder="Heatmap",row_names="Genes",col_names="Hela Cells",name_file="CNV.pdf",title="CNV")
+Hela_heatmap_overlap_Prot(Hela_data_log$mRNA,folder="Heatmap",row_names="Genes",col_names="Hela Cells",name_file="mRNA.pdf",title="mRNA")
+Hela_heatmap_overlap_Prot(Hela_data_log$Prot,folder="Heatmap",row_names="Proteins",col_names="Hela Cells",name_file="Prot.pdf",title="Proteins")
+Hela_heatmap_overlap_Prot(Hela_data_log$Kloss,folder="Heatmap",row_names="Proteins",col_names="Hela Cells",name_file="Kloss.pdf",title="Kloss")
+Hela_heatmap_overlap_Prot(Hela_data_log$Let7,folder="Heatmap",row_names="Proteins",col_names="Hela Cells",name_file="Let7.pdf",title="Let7")
+
+```
+
+
+## Protein complexes: correlation analysis across 14 Hela cell lines
+
+```{r include=FALSE, cache=FALSE}
+## chech with old Hela load("/Users/miyang/Documents/RWTH_Aachen/HELA/DATA/Hela_data_old.Rdata")
+
+# prot_in_cplex_NAME <- read.csv("/Users/miyang/Documents/RWTH_Aachen/CONVERSION/prot_in_cplex_NAME",row.names = 1) ; prot_in_cplex_NAME <- as.character(prot_in_cplex_NAME$x)
+
+merged_v2 <- Hela_data_log$merged_v2 ; inCORUM <- merged_v2[ ,"inCORUM"] ; names(inCORUM)<- rownames(merged_v2) ; inCORUM <- inCORUM[!is.na(inCORUM)]
+corum_IN <- names(inCORUM[inCORUM==1])
+corum_OUT <- names(inCORUM[inCORUM==0])
+
+CNV <- Hela_data_log$CNV ; colnames(CNV) <- as.character(1:14)
+mRNA <- Hela_data_log$mRNA; colnames(mRNA) <- as.character(1:14)
+Prot <- Hela_data_log$Prot; colnames(Prot) <- as.character(1:14)
+Kloss <- Hela_data_log$Kloss; colnames(Kloss) <- as.character(1:14)
+
+# CNV vs mRNA
+MAT_LIST <- list(CNV,mRNA)
+a <- common_full(MAT_LIST)[[1]]
+b <- common_full(MAT_LIST)[[2]]
+corr_CNV_mRNA_ALL <- corr_by_row(a,b)
+
+a_IN <- a[ rownames(a) %in% corum_IN , ]
+b_IN <- b[ rownames(b) %in% corum_IN , ]
+corr_CNV_mRNA_IN <- corr_by_row(a_IN,b_IN)
+
+a_OUT <- a[ rownames(a) %in% corum_OUT , ]
+b_OUT <- b[ rownames(b) %in% corum_OUT , ]
+corr_CNV_mRNA_OUT <- corr_by_row(a_OUT,b_OUT)
+
+
+# CNV vs Prot
+MAT_LIST <- list(CNV,Prot)
+a <- common_full(MAT_LIST)[[1]]
+b <- common_full(MAT_LIST)[[2]]
+corr_CNV_Prot_ALL <- corr_by_row(a,b)
+
+a_IN <- a[ rownames(a) %in% corum_IN , ]
+b_IN <- b[ rownames(b) %in% corum_IN , ]
+corr_CNV_Prot_IN <- corr_by_row(a_IN,b_IN)
+
+a_OUT <- a[ rownames(a) %in% corum_OUT , ]
+b_OUT <- b[ rownames(b) %in% corum_OUT , ]
+corr_CNV_Prot_OUT <- corr_by_row(a_OUT,b_OUT)
+
+# CNV vs Kloss
+MAT_LIST <- list(CNV,Kloss)
+a <- common_full(MAT_LIST)[[1]]
+b <- common_full(MAT_LIST)[[2]]
+corr_CNV_Kloss_ALL <- corr_by_row(a,b)
+
+a_IN <- a[ rownames(a) %in% corum_IN , ]
+b_IN <- b[ rownames(b) %in% corum_IN , ]
+corr_CNV_Kloss_IN <- corr_by_row(a_IN,b_IN)
+
+a_OUT <- a[ rownames(a) %in% corum_OUT , ]
+b_OUT <- b[ rownames(b) %in% corum_OUT , ]
+corr_CNV_Kloss_OUT <- corr_by_row(a_OUT,b_OUT)
+
+
+# mRNA vs Prot
+MAT_LIST <- list(mRNA,Prot)
+a <- common_full(MAT_LIST)[[1]]
+b <- common_full(MAT_LIST)[[2]]
+corr_mRNA_Prot_ALL <- corr_by_row(a,b)
+
+a_IN <- a[ rownames(a) %in% corum_IN , ]
+b_IN <- b[ rownames(b) %in% corum_IN , ]
+corr_mRNA_Prot_IN <- corr_by_row(a_IN,b_IN)
+
+a_OUT <- a[ rownames(a) %in% corum_OUT , ]
+b_OUT <- b[ rownames(b) %in% corum_OUT , ]
+corr_mRNA_Prot_OUT <- corr_by_row(a_OUT,b_OUT)
+
+
+# mRNA vs Kloss
+MAT_LIST <- list(mRNA,Kloss)
+a <- common_full(MAT_LIST)[[1]]
+b <- common_full(MAT_LIST)[[2]]
+corr_mRNA_Kloss_ALL <- corr_by_row(a,b)
+
+a_IN <- a[ rownames(a) %in% corum_IN , ]
+b_IN <- b[ rownames(b) %in% corum_IN , ]
+corr_mRNA_Kloss_IN <- corr_by_row(a_IN,b_IN)
+
+a_OUT <- a[ rownames(a) %in% corum_OUT , ]
+b_OUT <- b[ rownames(b) %in% corum_OUT , ]
+corr_mRNA_Kloss_OUT <- corr_by_row(a_OUT,b_OUT)
+
+# Prot vs Kloss
+MAT_LIST <- list(Prot,Kloss)
+a <- common_full(MAT_LIST)[[1]]
+b <- common_full(MAT_LIST)[[2]]
+corr_Prot_Kloss_ALL <- corr_by_row(a,b)
+
+a_IN <- a[ rownames(a) %in% corum_IN , ]
+b_IN <- b[ rownames(b) %in% corum_IN , ]
+corr_Prot_Kloss_IN <- corr_by_row(a_IN,b_IN)
+
+a_OUT <- a[ rownames(a) %in% corum_OUT , ]
+b_OUT <- b[ rownames(b) %in% corum_OUT , ]
+corr_Prot_Kloss_OUT <- corr_by_row(a_OUT,b_OUT)
+
+```
+
+
+# Prepare Boxplot
+
+```{r include=FALSE, cache=FALSE}
+
+IN <- corr_CNV_mRNA_IN
+OUT <- corr_CNV_mRNA_OUT
+CNV_mRNA_IN <- cbind(rep("CNV_mRNA",length(IN)),rep("Complex_IN",length(IN)), IN) 
+CNV_mRNA_OUT <- cbind(rep("CNV_mRNA",length(OUT)),rep("Complex_OUT",length(OUT)),OUT) 
+
+IN <- corr_CNV_Prot_IN
+OUT <- corr_CNV_Prot_OUT
+CNV_Prot_IN <- cbind(rep("CNV_Prot",length(IN)),rep("Complex_IN",length(IN)), IN) 
+CNV_Prot_OUT <- cbind(rep("CNV_Prot",length(OUT)),rep("Complex_OUT",length(OUT)),OUT) 
+
+IN <- corr_CNV_Kloss_IN
+OUT <- corr_CNV_Kloss_OUT
+CNV_Kloss_IN <- cbind(rep("CNV_Kloss",length(IN)),rep("Complex_IN",length(IN)), IN) 
+CNV_Kloss_OUT <- cbind(rep("CNV_Kloss",length(OUT)),rep("Complex_OUT",length(OUT)),OUT) 
+
+IN <- corr_mRNA_Prot_IN
+OUT <- corr_mRNA_Prot_OUT
+mRNA_Prot_IN <- cbind(rep("mRNA_Prot",length(IN)),rep("Complex_IN",length(IN)), IN) 
+mRNA_Prot_OUT <- cbind(rep("mRNA_Prot",length(OUT)),rep("Complex_OUT",length(OUT)),OUT) 
+
+IN <- corr_mRNA_Kloss_IN
+OUT <- corr_mRNA_Kloss_OUT
+mRNA_Kloss_IN <- cbind(rep("mRNA_Kloss",length(IN)),rep("Complex_IN",length(IN)), IN) 
+mRNA_Kloss_OUT <- cbind(rep("mRNA_Kloss",length(OUT)),rep("Complex_OUT",length(OUT)),OUT) 
+
+IN <- corr_Prot_Kloss_IN
+OUT <- corr_Prot_Kloss_OUT
+Prot_Kloss_IN <- cbind(rep("Prot_Kloss",length(IN)),rep("Complex_IN",length(IN)), IN) 
+Prot_Kloss_OUT <- cbind(rep("Prot_Kloss",length(OUT)),rep("Complex_OUT",length(OUT)),OUT) 
+
+data <- rbind(CNV_mRNA_IN,CNV_mRNA_OUT,CNV_Prot_IN,CNV_Prot_OUT,CNV_Kloss_IN,CNV_Kloss_OUT,mRNA_Prot_IN,mRNA_Prot_OUT,mRNA_Kloss_IN,mRNA_Kloss_OUT,Prot_Kloss_IN,Prot_Kloss_OUT)
+data <- as.data.frame(data)
+data[ ,3] <- as.numeric(as.character(data[ ,3])) 
+
+### compute significance
+GR <- names(table(data[,1]))
+p_value <- c()
+for(i in 1:length(GR)) {
+# t <- t.test( data[ intersect(which(data[,1]==GR[i]) , which(data[,2]=="Complex_IN")), 3] , data[ intersect(which(data[,1]==GR[i]) , which(data[,2]=="Complex_OUT")), 3]  )
+w <- wilcox.test(data[ intersect(which(data[,1]==GR[i]) , which(data[,2]=="Complex_IN")), 3], data[ intersect(which(data[,1]==GR[i]) , which(data[,2]=="Complex_OUT")), 3], paired=F) 
+p_value <- c(p_value, signif(w$p.value, 4) ) 
+}
+ 
+#### Pearson correlation
+colnames(data) <- c("Group", "variable", "Pearson_correlation") ;  
+pdf(file=paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/correlation_complexe/Pearson.pdf"), height=8, width=14, compress=TRUE)
+ggplot(data=data ) + geom_boxplot(aes(x=Group, y=Pearson_correlation, fill=variable)) + 
+theme(legend.position="bottom",legend.text=element_text(size=20), axis.text=element_text(size= 20) , axis.title= element_text(size= 20), plot.title = element_text(size = rel(2.5), hjust = 0.5 ),panel.background = element_rect(fill='white'), panel.grid.major = element_line(colour = "grey90")  ) + ggtitle("Correlation analysis across 14 Hela cell lines")  + 
+geom_signif(stat="identity", test = "t.test" , data=data.frame(x=1:length(GR) - 0.125, xend=1:length(GR) + 0.125, y=c(1.1, 1.1), annotation=as.character(p_value)),
+aes(x=x,xend=xend, y=y, yend=y, annotation=annotation))  
+## + geom_signif( comparisons = list(c("CNV_Kloss","CNV_Prot")),test = "t.test" ,  map_signif_level=TRUE) 
+dev.off()
+
+
+#### Spearman correlation
+colnames(data) <- c("Group", "variable", "Spearman_correlation")  
+pdf(file=paste0("/Users/miyang/Documents/RWTH_Aachen/HELA/PLOT/correlation_complexe/Spearman.pdf"), height=8, width=14, compress=TRUE)
+ggplot(data=data ) + geom_boxplot(aes(x=Group, y=Spearman_correlation, fill=variable)) + 
+theme(legend.position="bottom",legend.text=element_text(size=20), axis.text=element_text(size= 20) , axis.title= element_text(size= 20), plot.title = element_text(size = rel(2.5), hjust = 0.5 ),panel.background = element_rect(fill='white'), panel.grid.major = element_line(colour = "grey90") ) + ggtitle("Correlation analysis across 14 Hela cell lines") + 
+geom_signif(stat="identity", test = "t.test" , data=data.frame(x=1:length(GR) - 0.125, xend=1:length(GR) + 0.125, y=c(1.1, 1.1), annotation=as.character(p_value)),
+aes(x=x,xend=xend, y=y, yend=y, annotation=annotation))  
+dev.off()
+
+# data$Group <- factor(data$Group,levels = levels(c('CNV_mRNA','CNV_Prot','CNV_Kloss','mRNA_Prot','mRNA_Kloss','Prot_Kloss')),ordered = TRUE)
+# levels(data$Group) <- c('CNV_mRNA','CNV_Prot','CNV_Kloss','mRNA_Prot','mRNA_Kloss','Prot_Kloss')
+```
+
+
+
+
+
+
+
+
+
+
+

@@ -13,7 +13,7 @@ header = dashboardHeader(
   # Button pointing to the Saezlab Homepage
   tags$li(class = "dropdown",id = "saezlab",
           tags$a(href="http://saezlab.org", target="_blank", 
-                 tags$img(src="http://saezlab.org/assets/images/julio-logo.png",
+                 tags$img(src="logo_saezlab_removed_transparent_background.png",
                           height = 18, width = 18)
           ),
           bsTooltip("saezlab", "Go to the Saezlab Homepage",
@@ -29,7 +29,7 @@ header = dashboardHeader(
   
   # Button pointing to the GitHub respository
   tags$li(class = "dropdown", id="github",
-          tags$a(href="https://github.com/saezlab/ShinyProgeny",
+          tags$a(href="https://github.com/saezlab/HELA_project/tree/master/Hela_App/HeLa_App",
                  target="_blank", tags$img(icon("github"))
           ),
           bsTooltip("github", "View the code of this webside on GitHub",
@@ -214,16 +214,16 @@ body = dashboardBody(heigth="auto",width=1,
           br(),
           br(),
           br(),
-          a(img(src = "http://saezlab.org/assets/images/julio-logo.png", height = 72, width = 72),
+          a(img(src = "logo_saezlab_removed_transparent_background.png", height = 72, width = 72),
             href="http://saezlab.org", target="_blank"
-          ), "MTZ Pauwellstrasse 19, 52074 Aachen, Germany"
+          ), "MTZ Pauwelstrasse 19, 52074 Aachen, Germany"
   )
 )
 )
 
 #################### JOINING ####################
 tagList(dashboardPage(header, sidebar, body),
-        tags$footer("Hela App, version 0.1 (2017)", align = "center", style = "
+        tags$footer("HeLa App, version 0.1 (2018)", align = "center", style = "
               position:absolute;
               bottom:0;
               width:100%;

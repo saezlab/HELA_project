@@ -13,7 +13,7 @@ header = dashboardHeader(
   # Button pointing to the Saezlab Homepage
   tags$li(class = "dropdown",id = "saezlab",
           tags$a(href="http://saezlab.org", target="_blank", 
-                 tags$img(src="http://saezlab.org/assets/images/julio-logo.png",
+                 tags$img(src="logo_saezlab_removed_transparent_background.png",
                           height = 18, width = 18)
           ),
           bsTooltip("saezlab", "Go to the Saezlab Homepage",
@@ -214,7 +214,7 @@ body = dashboardBody(heigth="auto",width=1,
           br(),
           br(),
           br(),
-          a(img(src = "http://saezlab.org/assets/images/julio-logo.png", height = 72, width = 72),
+          a(img(src = "logo_saezlab_removed_transparent_background.png", height = 72, width = 72),
             href="http://saezlab.org", target="_blank"
           ), "MTZ Pauwellstrasse 19, 52074 Aachen, Germany"
   )

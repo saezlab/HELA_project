@@ -216,14 +216,14 @@ body = dashboardBody(heigth="auto",width=1,
           br(),
           a(img(src = "logo_saezlab_removed_transparent_background.png", height = 72, width = 72),
             href="http://saezlab.org", target="_blank"
-          ), "MTZ Pauwellstrasse 19, 52074 Aachen, Germany"
+          ), "MTZ Pauwelstrasse 19, 52074 Aachen, Germany"
   )
 )
 )
 
 #################### JOINING ####################
 tagList(dashboardPage(header, sidebar, body),
-        tags$footer("Hela App, version 0.1 (2017)", align = "center", style = "
+        tags$footer("HeLa App, version 0.1 (2018)", align = "center", style = "
               position:absolute;
               bottom:0;
               width:100%;

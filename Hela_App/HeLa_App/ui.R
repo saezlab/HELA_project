@@ -29,7 +29,7 @@ header = dashboardHeader(
   
   # Button pointing to the GitHub respository
   tags$li(class = "dropdown", id="github",
-          tags$a(href="https://github.com/saezlab/ShinyProgeny",
+          tags$a(href="https://github.com/saezlab/HELA_project/tree/master/Hela_App/HeLa_App",
                  target="_blank", tags$img(icon("github"))
           ),
           bsTooltip("github", "View the code of this webside on GitHub",

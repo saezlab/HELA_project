@@ -51,7 +51,7 @@ body = dashboardBody(heigth="auto",width=1,
                      tabItems(
                        tabItem(tabName = "Home",
                               h1("Welcome to the HeLa App"),
-                               h3(tags$i("A web application to visualize multi omics Hela cell lines")),
+                               h3(tags$i("A web application to visualize multi omics HeLa cell lines")),
                                br(),
                                h4("Description:"),
                                p("There is a growing concern over the issue of reproducibility in biology research as discussed in Nature. We hypothesize that at least some of this lack of reproducibility comes from the research reagents that scientists use, particularly also cell lines and research reagents. For example, cells might have the same name but be actually different (e.g. HeLa). With arrayCGH, mRNA-Seq, our newly developed data independent acquisition method SWATH mass spectrometry, and pulsed SILAC- SWATH method, we consistently measured the gene expression at each levels for 14 different Hela cell lines across different laboratories. Collectively, the quantitative data of the CNV (whole genome-wide), transcripts (11,365 high-quality mRNAs), proteins (5030), protein turnover rates (2083), and the responsive proteomic events under Let7 mimics treatment were acquired and included in this database, demonstrating a heterogeneity of gene expression control of Hela cells from different labs."),

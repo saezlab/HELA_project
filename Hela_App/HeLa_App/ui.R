@@ -9,7 +9,7 @@ List_of_cell_lines <- as.list(1:length(label_names)) ; names(List_of_cell_lines)
 
 #################### HEADER ####################
 header = dashboardHeader(
-  title = "Hela App",
+  title = "HeLa App",
   # Button pointing to the Saezlab Homepage
   tags$li(class = "dropdown",id = "saezlab",
           tags$a(href="http://saezlab.org", target="_blank", 
@@ -21,7 +21,7 @@ header = dashboardHeader(
   
   # Button pointing to the orginal HeLa publiation
   tags$li(class = "dropdown", id="publication",
-          tags$a(href="http://www.biorxiv.org/content/early/2016/08/28/065672",
+          tags$a(href="https://www.biorxiv.org/content/early/2018/04/30/307421",
                  target="_blank", tags$img(icon("file-text"))
           ),
           bsTooltip("publication", "Go to the HeLa publication",
@@ -50,16 +50,16 @@ sidebar = dashboardSidebar(
 body = dashboardBody(heigth="auto",width=1, 
                      tabItems(
                        tabItem(tabName = "Home",
-                               h1("Welcome to the Hela App"),
+                              h1("Welcome to the HeLa App"),
                                h3(tags$i("A web application to visualize multi omics Hela cell lines")),
                                br(),
                                h4("Description:"),
                                p("There is a growing concern over the issue of reproducibility in biology research as discussed in Nature. We hypothesize that at least some of this lack of reproducibility comes from the research reagents that scientists use, particularly also cell lines and research reagents. For example, cells might have the same name but be actually different (e.g. HeLa). With arrayCGH, mRNA-Seq, our newly developed data independent acquisition method SWATH mass spectrometry, and pulsed SILAC- SWATH method, we consistently measured the gene expression at each levels for 14 different Hela cell lines across different laboratories. Collectively, the quantitative data of the CNV (whole genome-wide), transcripts (11,365 high-quality mRNAs), proteins (5030), protein turnover rates (2083), and the responsive proteomic events under Let7 mimics treatment were acquired and included in this database, demonstrating a heterogeneity of gene expression control of Hela cells from different labs."),
                                br(),
                                h4("The original Hela publication can be cited as:"),
-                               p("XXXXXXXXXX", 
-                                 tags$a("XXXXXXXXXXX",
-                                        href="http://www.biorxiv.org/content/early/2016/08/28/065672",
+                               p("Liu et al", 
+                                 tags$a("Genomic, Proteomic and Phenotypic Heterogeneity in HeLa Cells across Laboratories: Implications for Reproducibility of Research Results",
+                                        href="https://www.biorxiv.org/content/early/2018/04/30/307421",
                                         target="_blank"))
                        ),
                        tabItem(tabName = "Data_Navigation",

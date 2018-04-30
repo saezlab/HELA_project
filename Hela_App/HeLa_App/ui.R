@@ -9,7 +9,7 @@ List_of_cell_lines <- as.list(1:length(label_names)) ; names(List_of_cell_lines)
 
 #################### HEADER ####################
 header = dashboardHeader(
-  title = "Hela App",
+  title = "HeLa App",
   # Button pointing to the Saezlab Homepage
   tags$li(class = "dropdown",id = "saezlab",
           tags$a(href="http://saezlab.org", target="_blank", 

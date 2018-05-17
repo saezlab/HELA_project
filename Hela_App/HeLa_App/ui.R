@@ -48,6 +48,7 @@ sidebar = dashboardSidebar(
 
 #################### BODY ####################
 body = dashboardBody(heigth="auto",width=1, 
+                     tags$head(includeScript("google-analytics.js")),
                      tabItems(
                        tabItem(tabName = "Home",
                               h1("Welcome to the HeLa App"),

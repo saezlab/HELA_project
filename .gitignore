@@ -4,3 +4,4 @@
 *.Ruserdata
 *.Rproj
 Hela_App/HeLa_App/rsconnect
+.Rproj.user
